@@ -1,8 +1,13 @@
 #!/bin/bash -e
 
-# If running the rails server then create or migrate existing database
+# If running the rails server then create or migrate existing database, then
+# (re)seed. Rooms are pure seed-defined data (see CLAUDE.md), so re-running
+# seeds on every boot keeps production room content in sync with db/seeds.rb.
+# db:prepare only seeds a freshly-created DB; the seeds themselves are
+# idempotent (rooms find_or_initialize_by + update!, starter notes guarded by
+# .none?), so re-seeding an existing DB is safe.
 if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
-  ./bin/rails db:prepare
+  ./bin/rails db:prepare db:seed
 fi
 
 exec "${@}"
