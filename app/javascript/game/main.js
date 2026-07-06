@@ -27,6 +27,7 @@ export function boot() {
   let basis = null       // camera-aligned ground vectors for input mapping
   let local = null       // { char, x, z, heading, moving }
   let exiting = false
+  let openBoardId = null // id of the noteboard whose panel is currently open
   let sendTimer = 0
   let lastSent = { x: null, z: null, heading: null, moving: false }
 
@@ -34,6 +35,8 @@ export function boot() {
     if (!preview) ui.fade(true)
     ui.prompt(null)
     ui.closeDialog()
+    ui.closeBoard()
+    openBoardId = null
 
     const room = await fetch(`/rooms/${slug}`).then(r => r.json())
 
@@ -141,6 +144,13 @@ export function boot() {
         ui.notice(data.text)
       }
     },
+    board_notes(data) {
+      if (ui.boardOpen && data.board === openBoardId) ui.renderNotes(data.notes)
+    },
+    note_posted(data) {
+      if (ui.boardOpen && data.board === openBoardId) ui.prependNote(data.note)
+      if (data.actor_id !== me.id) ui.notice(`${data.actor_name} pinned a note.`)
+    },
     async room_change(data) {
       net.leave()
       await loadRoom(data.slug)
@@ -148,12 +158,33 @@ export function boot() {
     }
   }
 
+  function openBoard(item) {
+    openBoardId = item.id
+    ui.openBoard(item.name, item.text)
+    if (preview) {
+      const now = Math.floor(Date.now() / 1000)
+      ui.renderNotes([
+        { id: -1, author: "Tifa", body: "Meet at the fountain at midnight.", at: now - 600 },
+        { id: -2, author: "Barret", body: "Who keeps unplugging the jukebox??", at: now - 90000 }
+      ])
+    } else {
+      net.readBoard(item.id)
+    }
+  }
+
+  ui.onPostNote = text => {
+    if (openBoardId) net.postNote(openBoardId, text)
+  }
+
   const input = new Input({
     onInteract() {
+      if (ui.boardOpen) return
       if (ui.dialogOpen) {
         ui.closeDialog()
       } else if (!exiting) {
-        net.interact()
+        const item = nearestInteractable()
+        if (item?.kind === "noteboard") openBoard(item)
+        else net.interact()
       }
     }
   })
@@ -188,7 +219,7 @@ export function boot() {
 
   function stepLocal(dt) {
     const axis = input.axis
-    const wantsMove = (axis.x !== 0 || axis.z !== 0) && !ui.dialogOpen && !exiting
+    const wantsMove = (axis.x !== 0 || axis.z !== 0) && !ui.dialogOpen && !ui.boardOpen && !exiting
 
     if (wantsMove) {
       const dir = new THREE.Vector3()
@@ -235,12 +266,12 @@ export function boot() {
       }
     }
 
-    if (ui.dialogOpen || exiting) {
+    if (ui.dialogOpen || ui.boardOpen || exiting) {
       ui.prompt(null)
     } else {
       const item = nearestInteractable()
       const other = item ? null : nearestRemote()
-      if (item) ui.prompt(`SPACE — check ${item.name}`)
+      if (item) ui.prompt(`SPACE — ${item.kind === "noteboard" ? "read" : "check"} ${item.name}`)
       else if (other) ui.prompt(`SPACE — greet ${other.char.name}`)
       else ui.prompt(null)
     }

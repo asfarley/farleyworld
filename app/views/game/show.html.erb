@@ -16,6 +16,19 @@
     <div id="dialog-text"></div>
     <div id="dialog-more">▼</div>
   </div>
+  <div id="noteboard" class="hidden">
+    <div id="noteboard-head">
+      <span id="noteboard-title">NOTICE BOARD</span>
+      <button id="noteboard-close" type="button" aria-label="Close">✕</button>
+    </div>
+    <div id="noteboard-sub"></div>
+    <div id="noteboard-notes"></div>
+    <form id="noteboard-form" autocomplete="off">
+      <input id="noteboard-input" type="text" maxlength="140" placeholder="Leave a note…" autocomplete="off">
+      <button id="noteboard-post" type="submit">Pin</button>
+    </form>
+  </div>
+
   <div id="notices"></div>
   <div id="controls-hint">WASD / ARROWS — walk &nbsp;&nbsp; SPACE — interact</div>
 

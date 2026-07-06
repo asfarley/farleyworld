@@ -33,4 +33,12 @@ export class Net {
   useExit(id) {
     this.sub?.perform("use_exit", { id })
   }
+
+  readBoard(id) {
+    this.sub?.perform("read_board", { id })
+  }
+
+  postNote(id, text) {
+    this.sub?.perform("post_note", { id, text })
+  }
 }

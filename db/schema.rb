@@ -10,7 +10,18 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_06_015520) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_06_020000) do
+  create_table "notes", force: :cascade do |t|
+    t.string "author", null: false
+    t.string "board_id", null: false
+    t.string "body", null: false
+    t.datetime "created_at", null: false
+    t.integer "room_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["room_id", "board_id", "created_at"], name: "index_notes_on_room_id_and_board_id_and_created_at"
+    t.index ["room_id"], name: "index_notes_on_room_id"
+  end
+
   create_table "players", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.float "heading"
@@ -32,5 +43,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_06_015520) do
     t.index ["slug"], name: "index_rooms_on_slug", unique: true
   end
 
+  add_foreign_key "notes", "rooms"
   add_foreign_key "players", "rooms"
 end

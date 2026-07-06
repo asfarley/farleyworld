@@ -52,6 +52,31 @@ class RoomChannel < ApplicationCable::Channel
     end
   end
 
+  # Note boards. read_board answers the requester only; post_note validates
+  # proximity (like interact) then broadcasts so every open board updates live.
+  def read_board(data)
+    board = board_near(current_player.reload, data["id"].to_s)
+    return unless board
+
+    notes = Note.for_board(@room, board["id"]).recent.limit(Note::KEEP).map(&:to_payload)
+    transmit({ "type" => "board_notes", "board" => board["id"], "notes" => notes })
+  end
+
+  def post_note(data)
+    me = current_player.reload
+    board = board_near(me, data["id"].to_s)
+    return unless board
+
+    body = data["text"].to_s.strip[0, Note::MAX_BODY].to_s
+    return if body.empty?
+
+    note = Note.create!(room: @room, board_id: board["id"], author: me.name, body: body)
+    broadcast({
+      "type" => "note_posted", "board" => board["id"], "note" => note.to_payload,
+      "actor_id" => me.id, "actor_name" => me.name
+    })
+  end
+
   def use_exit(data)
     me = current_player.reload
     exit_def = @room.exit_near(me.x, me.z, data["id"].to_s)
@@ -74,6 +99,17 @@ class RoomChannel < ApplicationCable::Channel
 
   def broadcast(payload)
     self.class.broadcast_to(@room, payload)
+  end
+
+  # The noteboard interactable with the given id, if the player is close
+  # enough to it to read or post. Generous slack — movement is locked while a
+  # board is open, so the player is already within radius.
+  def board_near(me, id)
+    board = @room.interactables.find { |i| i["id"] == id && i["kind"] == "noteboard" }
+    return unless board
+    return unless Math.hypot(board["x"] - me.x, board["z"] - me.z) <= board.fetch("radius", 1.5) + INTERACT_RANGE
+
+    board
   end
 
   def nearby_player(me)

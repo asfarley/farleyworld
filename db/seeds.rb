@@ -213,7 +213,8 @@ courtyard = {
     { "id" => "fountain", "name" => "Fountain", "x" => 0.0, "z" => 0.0, "radius" => 2.9,
       "text" => "Moonlight pools in the water. Coins wink up from the bottom —\nwishes in a currency nobody remembers." },
     { "id" => "board", "name" => "Notice Board", "x" => 1.9, "z" => -6.4, "radius" => 1.3,
-      "text" => "NOTICES:\n· Lounge open all night. The lounge is always open.\n· Lost: one arcade token. Sentimental value. Reward: another token." },
+      "kind" => "noteboard",
+      "text" => "A cork board studded with pins. Anyone may leave a note." },
     { "id" => "bench", "name" => "Bench", "x" => 6.2, "z" => 0.0, "radius" => 1.4,
       "text" => "You rest a moment. Crickets. Somewhere beyond the wall,\na city that never quite loads in." },
     { "id" => "flowers", "name" => "Flower Bed", "x" => -4.0, "z" => -4.9, "radius" => 1.3,
@@ -234,4 +235,16 @@ courtyard = {
   room = Room.find_or_initialize_by(slug: attrs[:slug])
   room.update!(name: attrs[:name], data: attrs[:data])
   puts "Seeded room: #{room.name} (#{room.data['walkmesh']['triangles'].length} walkmesh triangles)"
+end
+
+# Starter notes for the courtyard board (the old static flavor, now real
+# player-style notes). Only seeded when the board is empty so reseeding never
+# duplicates or clobbers what players have pinned.
+courtyard_room = Room.find_by!(slug: "courtyard")
+if Note.for_board(courtyard_room, "board").none?
+  [
+    [ "Aeris",  "Lounge open all night. The lounge is always open." ],
+    [ "???",    "Lost: one arcade token. Sentimental value. Reward: another token." ]
+  ].each { |author, body| Note.create!(room: courtyard_room, board_id: "board", author: author, body: body) }
+  puts "Seeded #{Note.for_board(courtyard_room, 'board').count} starter notes on the courtyard board."
 end
