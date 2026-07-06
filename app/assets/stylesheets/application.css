@@ -1,0 +1,188 @@
+/* Farleyworld — PS1-lounge chrome */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --ui-blue-a: #10102e;
+  --ui-blue-b: #060618;
+  --ui-border: #c8c8dc;
+  --ui-text: #f0f0e8;
+}
+
+html, body {
+  height: 100%;
+  background: #05050a;
+  color: var(--ui-text);
+  font-family: "Lucida Console", Monaco, monospace;
+  overflow: hidden;
+}
+
+/* ---------- Title screen ---------- */
+
+.title-screen {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.2rem;
+  background:
+    radial-gradient(ellipse at 50% 120%, #1c1436 0%, #05050a 70%);
+}
+
+.game-title {
+  font-size: clamp(2rem, 7vw, 4.5rem);
+  letter-spacing: 0.35em;
+  text-shadow: 0 0 18px #7a5cff88, 3px 3px 0 #000;
+}
+
+.game-subtitle {
+  color: #9a92c8;
+  letter-spacing: 0.5em;
+  margin-bottom: 2rem;
+}
+
+.enter-form { display: flex; gap: 0.6rem; }
+
+.name-input {
+  background: var(--ui-blue-b);
+  border: 2px solid var(--ui-border);
+  border-radius: 6px;
+  color: var(--ui-text);
+  font: inherit;
+  font-size: 1.1rem;
+  padding: 0.6rem 1rem;
+  outline: none;
+  width: 16ch;
+}
+
+.name-input:focus { border-color: #fff; box-shadow: 0 0 12px #7a5cff66; }
+
+.enter-button {
+  background: linear-gradient(#3a3a7a, #191940);
+  border: 2px solid var(--ui-border);
+  border-radius: 6px;
+  color: var(--ui-text);
+  font: inherit;
+  font-size: 1.1rem;
+  padding: 0.6rem 1.4rem;
+  cursor: pointer;
+}
+
+.enter-button:hover { filter: brightness(1.35); }
+
+.flash-alert { color: #ff8a8a; }
+
+.title-hint { color: #6a648f; font-size: 0.85rem; margin-top: 2rem; }
+
+/* ---------- Game screen ---------- */
+
+#game { position: fixed; inset: 0; }
+
+#game-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.hidden { display: none !important; }
+
+#hud {
+  position: absolute;
+  top: 12px; left: 12px; right: 12px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  pointer-events: none;
+}
+
+.hud-panel, #hud-leave {
+  background: linear-gradient(var(--ui-blue-a), var(--ui-blue-b));
+  border: 2px solid var(--ui-border);
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 0.9rem;
+  box-shadow: 2px 2px 0 #00000088;
+}
+
+#hud-online { margin-left: auto; color: #b8e6b8; }
+
+#hud-leave-form { pointer-events: auto; }
+
+#hud-leave { color: var(--ui-text); font: inherit; font-size: 0.8rem; cursor: pointer; }
+#hud-leave:hover { filter: brightness(1.4); }
+
+#prompt {
+  position: absolute;
+  bottom: 130px; left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(var(--ui-blue-a), var(--ui-blue-b));
+  border: 2px solid var(--ui-border);
+  border-radius: 6px;
+  padding: 5px 16px;
+  font-size: 0.9rem;
+  color: #ffe9a8;
+  box-shadow: 2px 2px 0 #00000088;
+  animation: prompt-bob 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes prompt-bob { from { margin-bottom: 0; } to { margin-bottom: 6px; } }
+
+#dialog {
+  position: absolute;
+  left: 50%; bottom: 24px;
+  transform: translateX(-50%);
+  width: min(680px, 92vw);
+  background: linear-gradient(#2a2a68f2, #0a0a24f2);
+  border: 3px solid var(--ui-border);
+  border-radius: 8px;
+  padding: 14px 20px 18px;
+  box-shadow: 3px 3px 0 #000000aa, inset 0 0 30px #00000055;
+}
+
+#dialog-title { color: #a8d8ff; font-size: 0.8rem; margin-bottom: 6px; letter-spacing: 0.1em; }
+#dialog-text { line-height: 1.5; font-size: 1rem; min-height: 3em; white-space: pre-wrap; }
+#dialog-more {
+  position: absolute; right: 14px; bottom: 6px;
+  color: #ffe9a8; font-size: 0.8rem;
+  animation: prompt-bob 0.6s ease-in-out infinite alternate;
+}
+
+#notices {
+  position: absolute;
+  left: 14px; bottom: 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  pointer-events: none;
+}
+
+.notice {
+  background: #00000099;
+  border-left: 3px solid #8878d8;
+  padding: 3px 10px;
+  font-size: 0.8rem;
+  color: #cfc8f0;
+  transition: opacity 0.8s;
+}
+
+#controls-hint {
+  position: absolute;
+  right: 14px; bottom: 12px;
+  color: #ffffff55;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  pointer-events: none;
+}
+
+#fade {
+  position: absolute; inset: 0;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+
+#fade.active { opacity: 1; pointer-events: auto; }

@@ -1,0 +1,36 @@
+<div id="game"
+     data-player-id="<%= current_player.id %>"
+     data-player-name="<%= current_player.name %>"
+     data-room-slug="<%= current_player.room.slug %>">
+  <canvas id="game-canvas"></canvas>
+
+  <div id="hud">
+    <div id="hud-room" class="hud-panel"></div>
+    <div id="hud-online" class="hud-panel"></div>
+    <%= button_to "Leave", session_path, method: :delete, id: "hud-leave", form: { id: "hud-leave-form" } %>
+  </div>
+
+  <div id="prompt" class="hidden"></div>
+  <div id="dialog" class="hidden">
+    <div id="dialog-title"></div>
+    <div id="dialog-text"></div>
+    <div id="dialog-more">▼</div>
+  </div>
+  <div id="notices"></div>
+  <div id="controls-hint">WASD / ARROWS — walk &nbsp;&nbsp; SPACE — interact</div>
+  <div id="fade"></div>
+
+  <% if Rails.env.development? %>
+    <pre id="jslog" style="position:absolute;top:60px;left:12px;color:#ff7070;font-size:11px;max-width:60ch;white-space:pre-wrap;pointer-events:none;"></pre>
+    <script>
+      window.dbg = m => { document.getElementById("jslog").textContent += m + "\n" }
+      window.addEventListener("error", e => {
+        const desc = e.message || `resource error: ${e.target?.src || e.target?.href || e.target?.tagName}`
+        document.getElementById("jslog").textContent += `${desc} @ ${e.filename || ""}:${e.lineno || ""}\n`
+      }, true)
+      window.addEventListener("unhandledrejection", e => {
+        document.getElementById("jslog").textContent += `unhandled rejection: ${e.reason}\n${e.reason?.stack || ""}\n`
+      })
+    </script>
+  <% end %>
+</div>

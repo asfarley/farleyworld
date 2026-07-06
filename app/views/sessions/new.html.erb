@@ -1,0 +1,16 @@
+<div class="title-screen">
+  <h1 class="game-title">FARLEYWORLD</h1>
+  <p class="game-subtitle">— a lounge —</p>
+
+  <%= form_with url: session_path, method: :post, class: "enter-form" do |f| %>
+    <%= f.text_field :name, placeholder: "Your name", maxlength: 20, autofocus: true,
+          autocomplete: "off", class: "name-input" %>
+    <%= f.submit "Enter", class: "enter-button" %>
+  <% end %>
+
+  <% if flash[:alert] %>
+    <p class="flash-alert"><%= flash[:alert] %></p>
+  <% end %>
+
+  <p class="title-hint">WASD / arrows to walk &nbsp;·&nbsp; SPACE to interact</p>
+</div>
