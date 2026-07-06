@@ -1,0 +1,57 @@
+# Kamal deploy: farleyworld → lobby.asfarley.com
+# Shares the EC2 host (and its kamal-proxy) with farleyrace/race.asfarley.com.
+#
+#   export KAMAL_REGISTRY_PASSWORD=<ghcr personal access token, write:packages>
+#   kamal setup    # first deploy
+#   kamal deploy   # afterwards
+
+service: farleyworld
+image: asfarley/farleyworld
+
+servers:
+  web:
+    - lobby.asfarley.com
+
+proxy:
+  ssl: true
+  host: lobby.asfarley.com
+  app_port: 3000  # Dockerfile runs `rails server` directly (no Thruster)
+
+registry:
+  server: ghcr.io
+  username: asfarley
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+builder:
+  arch: amd64  # EC2 host is x86_64
+
+ssh:
+  user: ubuntu
+  keys:
+    - ~/.ssh/farleyrace.pem
+
+env:
+  clear:
+    # Action Cable (RoomChannel realtime sync) — points at the redis accessory
+    # below, reachable by container name on the shared kamal docker network.
+    REDIS_URL: redis://farleyworld-redis:6379/1
+  secret:
+    - RAILS_MASTER_KEY
+
+# SQLite database + Active Storage live here; this named volume is the only
+# copy of production data.
+volumes:
+  - "farleyworld_storage:/rails/storage"
+
+# Bridge fingerprinted assets between versions to avoid 404s during deploys.
+asset_path: /rails/public/assets
+
+accessories:
+  redis:
+    image: redis:7
+    host: lobby.asfarley.com
+    # No published port on purpose: Docker published ports bypass ufw, and the
+    # app reaches redis over the internal kamal network anyway.
+    volumes:
+      - farleyworld_redis:/data
