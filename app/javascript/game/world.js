@@ -7,22 +7,35 @@ export function buildWorld(room) {
   const walkmesh = new Walkmesh(room.walkmesh)
 
   const envScene = new THREE.Scene()
-  envScene.background = new THREE.Color(room.background || "#0a0a14")
-
   const actorScene = new THREE.Scene()
 
   addLights(envScene, room)
   addLights(actorScene, room)
 
-  envScene.add(groundMesh(room))
-  for (const prop of room.props || []) envScene.add(propMesh(prop))
+  // A room can supply a photographic `backdrop` (a real pre-rendered image)
+  // instead of primitive scenery. In that mode the image is all we draw for
+  // color; every prop becomes an invisible, depth-only occluder so live
+  // characters are still correctly hidden behind foreground scenery (the
+  // fountain, the front chairs) exactly like the primitive-rendered rooms.
+  let backdropTexture = null
+  let ready = Promise.resolve()
+  if (room.backdrop) {
+    ready = new Promise(resolve => {
+      backdropTexture = new THREE.TextureLoader().load(room.backdrop, resolve, undefined, resolve)
+    })
+    for (const prop of room.props || []) envScene.add(propMesh(prop, true))
+  } else {
+    envScene.background = new THREE.Color(room.background || "#0a0a14")
+    envScene.add(groundMesh(room))
+    for (const prop of room.props || []) envScene.add(propMesh(prop))
+  }
 
   const cam = room.camera
   const camera = new THREE.PerspectiveCamera(cam.fov || 40, 1, 0.1, 200)
   camera.position.set(...cam.position)
   camera.lookAt(new THREE.Vector3(...cam.look_at))
 
-  return { room, walkmesh, envScene, actorScene, camera }
+  return { room, walkmesh, envScene, actorScene, camera, backdropTexture, ready }
 }
 
 // The FF7/RE trick: render the static room ONCE into a color+depth target.
@@ -43,11 +56,26 @@ export function prerenderBackground(renderer, world, width, height) {
   renderer.render(world.envScene, world.camera)
   renderer.setRenderTarget(null)
 
+  // Photo-backdrop rooms sample the image directly for color (the render
+  // target only carries occluder depth). Cover-fit the image to the viewport
+  // so its own aspect is preserved instead of stretched to the frame.
+  const photo = world.backdropTexture
+  const cover = new THREE.Vector2(1, 1)
+  if (photo && photo.image) {
+    const imageAspect = photo.image.width / photo.image.height
+    const viewAspect = width / height
+    if (viewAspect > imageAspect) cover.set(1, imageAspect / viewAspect)
+    else cover.set(viewAspect / imageAspect, 1)
+  }
+
   const material = new THREE.RawShaderMaterial({
     glslVersion: THREE.GLSL3,
     uniforms: {
       tColor: { value: target.texture },
-      tDepth: { value: depthTexture }
+      tDepth: { value: depthTexture },
+      tPhoto: { value: photo },
+      uUsePhoto: { value: photo ? 1 : 0 },
+      uCover: { value: cover }
     },
     vertexShader: `
       in vec3 position;
@@ -62,14 +90,26 @@ export function prerenderBackground(renderer, world, width, height) {
       precision highp float;
       uniform sampler2D tColor;
       uniform sampler2D tDepth;
+      uniform sampler2D tPhoto;
+      uniform int uUsePhoto;
+      uniform vec2 uCover;
       in vec2 vUv;
       out vec4 outColor;
       void main() {
-        vec4 c = texture(tColor, vUv);
-        // The render target holds linear values; rendering the quad straight
-        // to the canvas skips three's output color-space conversion, so
-        // gamma-encode here to match the sRGB character pass.
-        outColor = vec4(pow(c.rgb, vec3(1.0 / 2.2)), c.a);
+        vec3 rgb;
+        if (uUsePhoto == 1) {
+          // The photo is already sRGB-encoded; sampled raw and drawn straight
+          // to the canvas it displays at the right brightness with no gamma
+          // step (unlike the linear render-target path below).
+          vec2 uv = vec2(0.5) + (vUv - vec2(0.5)) * uCover;
+          rgb = texture(tPhoto, uv).rgb;
+        } else {
+          // The render target holds linear values; rendering the quad straight
+          // to the canvas skips three's output color-space conversion, so
+          // gamma-encode here to match the sRGB character pass.
+          rgb = pow(texture(tColor, vUv).rgb, vec3(1.0 / 2.2));
+        }
+        outColor = vec4(rgb, 1.0);
         gl_FragDepth = texture(tDepth, vUv).r;
       }
     `,
@@ -140,7 +180,7 @@ function groundMesh(room) {
   return new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ vertexColors: true }))
 }
 
-function propMesh(prop) {
+function propMesh(prop, occluder = false) {
   let geometry
   switch (prop.type) {
     case "box":
@@ -166,6 +206,9 @@ function propMesh(prop) {
     color: prop.color || "#888888",
     emissive: prop.emissive || "#000000"
   })
+  // Occluders live only in the depth buffer: invisible, but they still hide
+  // characters that walk behind them.
+  if (occluder) material.colorWrite = false
   const mesh = new THREE.Mesh(geometry, material)
   mesh.position.set(...prop.pos)
   if (prop.type === "plane") mesh.rotation.x = -Math.PI / 2

@@ -47,6 +47,7 @@ export function boot() {
     background?.dispose()
 
     world = buildWorld(room)
+    await world.ready // photo backdrops must finish loading before we prerender
     refreshViewport()
     ui.setRoom(room.name)
     ui.setOnline(1)
