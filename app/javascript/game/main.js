@@ -51,8 +51,12 @@ export function boot() {
   }
 
   function refreshViewport() {
-    const w = Math.max(2, Math.floor(root.clientWidth * RENDER_SCALE))
-    const h = Math.max(2, Math.floor(root.clientHeight * RENDER_SCALE))
+    // Keep the internal short edge ≳220px so phones don't become pure mush;
+    // desktops stay at the fixed retro scale.
+    const short = Math.min(root.clientWidth, root.clientHeight)
+    const scale = Math.min(1, Math.max(RENDER_SCALE, 220 / short))
+    const w = Math.max(2, Math.floor(root.clientWidth * scale))
+    const h = Math.max(2, Math.floor(root.clientHeight * scale))
     renderer.setSize(w, h, false)
     if (!world) return
     world.camera.aspect = w / h

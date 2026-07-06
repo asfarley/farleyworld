@@ -18,6 +18,12 @@
   </div>
   <div id="notices"></div>
   <div id="controls-hint">WASD / ARROWS — walk &nbsp;&nbsp; SPACE — interact</div>
+
+  <div id="touch-controls" class="hidden" aria-hidden="true">
+    <div id="touch-pad"><div id="touch-nub"></div></div>
+    <button id="touch-action" type="button">✕</button>
+  </div>
+
   <div id="fade"></div>
 
   <% if Rails.env.development? %>

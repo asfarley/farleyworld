@@ -77,7 +77,11 @@ html, body {
 
 /* ---------- Game screen ---------- */
 
-#game { position: fixed; inset: 0; }
+#game {
+  position: fixed;
+  inset: 0;
+  touch-action: none; /* no scroll/pinch while playing */
+}
 
 #game-canvas {
   width: 100%;
@@ -186,3 +190,69 @@ html, body {
 }
 
 #fade.active { opacity: 1; pointer-events: auto; }
+
+/* ---------- Touch controls (mobile) ---------- */
+
+#game.touch-enabled #controls-hint { display: none; }
+
+#touch-controls {
+  position: absolute;
+  inset: 0;
+  pointer-events: none; /* only the pad and button take touches */
+}
+
+#touch-pad {
+  position: absolute;
+  left: max(18px, env(safe-area-inset-left));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  border: 2px solid #c8c8dc66;
+  background: radial-gradient(circle at 50% 40%, #10102ecc, #060618cc);
+  box-shadow: 2px 2px 0 #00000066;
+  pointer-events: auto;
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#touch-nub {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 2px solid var(--ui-border);
+  background: linear-gradient(#3a3a7a, #191940);
+  box-shadow: 0 0 10px #7a5cff44;
+  pointer-events: none;
+}
+
+#touch-action {
+  position: absolute;
+  right: max(22px, env(safe-area-inset-right));
+  bottom: max(40px, calc(env(safe-area-inset-bottom) + 22px));
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  border: 2px solid var(--ui-border);
+  background: radial-gradient(circle at 50% 35%, #3a3a7acc, #10102ecc);
+  color: #ffe9a8;
+  font: inherit;
+  font-size: 1.7rem;
+  box-shadow: 2px 2px 0 #00000088;
+  pointer-events: auto;
+  touch-action: none;
+  cursor: pointer;
+}
+
+#touch-action:active {
+  filter: brightness(1.5);
+  transform: scale(0.94);
+}
+
+/* keep the dialog clear of thumbs on small screens */
+@media (max-width: 700px) {
+  #dialog { bottom: 120px; width: 94vw; }
+  #prompt { bottom: 220px; }
+}

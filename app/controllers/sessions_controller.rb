@@ -8,7 +8,7 @@ class SessionsController < ApplicationController
         spawn = room.spawn
         player.update!(room:, x: spawn["x"], z: spawn["z"], heading: spawn.fetch("heading", 0.0))
       end
-      sign_in(player, preview: params[:preview])
+      sign_in(player, preview: params[:preview], touch: params[:touch])
       return
     end
 
@@ -32,8 +32,8 @@ class SessionsController < ApplicationController
 
   private
 
-  def sign_in(player, preview: nil)
+  def sign_in(player, preview: nil, touch: nil)
     cookies.signed[:player_id] = { value: player.id, httponly: true, same_site: :lax }
-    redirect_to play_path(preview: preview.presence)
+    redirect_to play_path(preview: preview.presence, touch: touch.presence)
   end
 end

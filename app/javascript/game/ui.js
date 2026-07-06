@@ -4,6 +4,9 @@ const el = id => document.getElementById(id)
 
 let dialogTimer = null
 
+// On touch screens the dialog itself is the most natural dismiss target.
+el("dialog")?.addEventListener("pointerdown", () => ui.closeDialog())
+
 export const ui = {
   get dialogOpen() {
     return !el("dialog").classList.contains("hidden")

@@ -17,6 +17,9 @@ Open http://localhost:3000, enter a name, walk around. Open a second browser
 - **WASD / arrow keys** — walk (camera-relative)
 - **SPACE** — interact with the nearest object or player / dismiss dialog
 - Walk into a doorway to change rooms (Lounge ⇄ Courtyard)
+- **Mobile**: touch devices (coarse pointer, or first touch on hybrids) get an
+  on-screen thumb-pad (move) and a ✕ button (interact); tap the dialog to
+  dismiss it. Append `?touch=1` to force the controls on desktop.
 
 ### Dev shortcuts
 
