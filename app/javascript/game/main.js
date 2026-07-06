@@ -6,6 +6,7 @@ import { Input } from "game/input"
 import { ui } from "game/ui"
 
 const RENDER_SCALE = 1 / 3 // internal resolution vs CSS pixels — the PS1 look
+const DESIGN_ASPECT = 1.35 // landscape aspect the fixed cameras are framed for
 const WALK_SPEED = 4.0     // units / second
 const SEND_INTERVAL = 0.1  // seconds between network position updates
 const INTERACT_RANGE = 1.6
@@ -63,6 +64,19 @@ export function boot() {
     renderer.setSize(w, h, false)
     if (!world) return
     world.camera.aspect = w / h
+
+    // The rooms are framed for a landscape viewport. Because a PerspectiveCamera
+    // holds its *vertical* FOV constant, a narrow portrait phone shrinks the
+    // *horizontal* FOV and crops the room's sides/corners. Dolly the camera
+    // straight back (no FOV change → no perspective distortion) so the whole
+    // room stays in frame; landscape/desktop viewports (aspect ≥ DESIGN_ASPECT)
+    // are left untouched.
+    const cam = world.room.camera
+    const look = new THREE.Vector3(...cam.look_at)
+    const eye = new THREE.Vector3(...cam.position)
+    const dolly = Math.max(1, DESIGN_ASPECT / world.camera.aspect)
+    world.camera.position.copy(look).addScaledVector(eye.sub(look), dolly)
+    world.camera.lookAt(look)
     world.camera.updateProjectionMatrix()
 
     background?.dispose()
