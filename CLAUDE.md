@@ -1,15 +1,40 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # Farleyworld — notes for agents
 
 Rails 8.1 (Ruby 3.4.2 via rbenv — 3.3 breaks actionview 8.1), importmap +
 Propshaft, SQLite, ActionCable (async adapter in dev). No Node build step.
+PS1-era MMO lounge: fixed cameras, pre-rendered backgrounds, low-poly
+characters on a walkmesh (see README for the full write-up).
+
+## Commands
+
+- `bin/rails db:prepare db:seed` — set up / reseed the database.
+- `bin/rails server` (or `bin/dev`, same thing) — run at localhost:3000.
+- `bin/ci` — runs setup + security audits (bundler-audit, importmap audit).
+  There is **no test suite** (no test/ directory); verification is manual —
+  see "Verify after changes" below.
+- Deploy: `kamal deploy` (`kamal setup` first time). Shares an EC2 host and
+  kamal-proxy with farleyrace; GHCR token is read from
+  `~/.config/kamal/ghcr-token` (mode 600), see `.kamal/secrets` and
+  `config/deploy.yml`.
 
 ## Architecture in one breath
 
 Server: `Room` (JSON `data` column holds walkmesh/props/camera/interactables/
 exits), `Player` (room + x/z/heading), `RoomChannel` validates moves against
-`Room#contains?` and rebroadcasts. Client: `app/javascript/game/*` — Three.js
-scene built from room JSON, static geometry pre-rendered once to a color+depth
+`Room#contains?` and rebroadcasts (`roster`, `player_moved`, `interaction`,
+`room_change`, join/leave). Client: `app/javascript/game/*` — Three.js scene
+built from room JSON, static geometry pre-rendered once to a color+depth
 target, characters composited over it each frame (see README for the trick).
+
+**Rooms are pure data**: everything (spawn, camera, lights, walkmesh via
+`grid_walkmesh`, props, interactables, exits) lives in `Room#data`, seeded
+from `db/seeds.rb`. Adding a room = adding a seed entry; no client or server
+code changes. Client and server run the same point-in-mesh test — keep
+`game/walkmesh.js` and `Room#contains?` in agreement.
 
 ## Gotchas learned the hard way
 
@@ -32,7 +57,8 @@ target, characters composited over it each frame (see README for the trick).
   WebSocket (`scratchpad cable tests`) for protocol checks against
   `ws://localhost:PORT/cable`.
 - Dev login shortcuts: `/?as=Name`, `&room=<slug>`, `&preview=1`
-  (sessions#new, development only).
+  (sessions#new, development only). `?touch=1` forces mobile touch controls
+  on desktop.
 
 ## Verify after changes
 
