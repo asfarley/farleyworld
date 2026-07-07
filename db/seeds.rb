@@ -294,7 +294,7 @@ courtyard = {
     { "id" => "to_lounge", "to" => "lounge", "x" => 0.0, "z" => -6.6, "radius" => 0.9,
       "spawn" => { "x" => 0.0, "z" => 4.3, "heading" => Math::PI } },
     { "id" => "to_arabic", "to" => "arabic", "x" => 0.0, "z" => 6.6, "radius" => 0.9,
-      "spawn" => { "x" => 0.0, "z" => -2.8, "heading" => 0.0 } }
+      "spawn" => { "x" => 0.0, "z" => -5.0, "heading" => 0.0 } }
   ]
 }
 
@@ -311,67 +311,80 @@ courtyard = {
 
 sand      = "#c8a878"
 sand_dk   = "#a8895f"
+tile_blue = "#2f6f92"
 
-# This room uses a photographic backdrop (public/arabic.png — a Damascene
-# courtyard shot at eye level). The image supplies all the color; the props
-# below are invisible depth-only occluders whose silhouettes are lined up with
-# the objects in the photo, so a character walking to the back is correctly
-# hidden behind the central fountain, the front chairs and the right column.
-# Coordinate frame: fountain at the origin, camera on +z looking toward the
-# back wall at -z; heading 0 faces +z (toward the camera).
+arabic_palms   = [[5.6, 5.6], [-5.6, 5.6], [5.6, -5.6], [-5.6, -5.6]]
+arabic_cols    = [[3.4, 3.4], [-3.4, 3.4], [3.4, -3.4], [-3.4, -3.4]]
+arabic_benches = [[5.2, -5.2], [-5.2, 5.2]]
 
 arabic_blocked = lambda do |cx, cz|
-  Math.hypot(cx, cz) < 1.8 ||                             # central fountain
-    (cx.between?(-4.3, -2.0) && cz.between?(2.2, 4.5)) ||  # café table, front-left
-    (cx.between?(2.5, 4.4) && cz.between?(2.2, 4.5)) ||    # plastic chairs, front-right
-    Math.hypot(cx - 4.6, cz + 0.5) < 0.8                   # stone column, right
+  Math.hypot(cx, cz) < 1.9 ||
+    arabic_palms.any?   { |px, pz| Math.hypot(cx - px, cz - pz) < 0.8 } ||
+    arabic_cols.any?    { |px, pz| Math.hypot(cx - px, cz - pz) < 0.5 } ||
+    arabic_benches.any? { |px, pz| Math.hypot(cx - px, cz - pz) < 0.7 }
 end
 
 arabic_props = [
-  # central hexagonal tiered fountain — the key foreground occluder
-  { "type" => "cylinder", "r" => 1.3, "h" => 1.05, "pos" => [0, 0.52, 0], "color" => sand_dk, "segments" => 6 },
-  { "type" => "cylinder", "r" => 0.9, "h" => 0.18, "pos" => [0, 1.14, 0], "color" => sand_dk, "segments" => 12 },
-  { "type" => "cylinder", "r" => 0.3, "h" => 1.0, "pos" => [0, 1.35, 0], "color" => sand, "segments" => 8 },
-  { "type" => "cylinder", "r" => 0.78, "r2" => 0.66, "h" => 0.2, "pos" => [0, 1.75, 0], "color" => sand, "segments" => 12 },
-  { "type" => "cylinder", "r" => 0.14, "h" => 0.95, "pos" => [0, 2.3, 0], "color" => sand, "segments" => 8 },
-  # tall stone column with its capital, right foreground
-  { "type" => "cylinder", "r" => 0.36, "h" => 3.4, "pos" => [4.6, 1.7, -0.5], "color" => sand, "segments" => 12 },
-  { "type" => "cylinder", "r" => 0.5, "r2" => 0.36, "h" => 0.5, "pos" => [4.6, 3.55, -0.5], "color" => sand_dk, "segments" => 12 },
-  # café table + chair, front-left
-  { "type" => "cylinder", "r" => 0.85, "h" => 0.74, "pos" => [-3.2, 0.37, 3.2], "color" => sand_dk, "segments" => 12 },
-  { "type" => "box", "size" => [0.52, 1.0, 0.52], "pos" => [-2.4, 0.5, 3.5], "color" => sand_dk },
-  # plastic chairs, front-right
-  { "type" => "box", "size" => [0.55, 0.95, 0.55], "pos" => [3.3, 0.48, 3.1], "color" => sand }
+  *walls(14, 14, color: sand, gaps: [:n, :s, :e, :w], h: 3.2),
+  # horseshoe arches over each gateway
+  *[[0, -7.0, :z], [0, 7.0, :z], [-7.0, 0, :x], [7.0, 0, :x]].map do |ax, az, axis|
+    { "type" => "box", "size" => (axis == :z ? [3.0, 0.6, 0.5] : [0.5, 0.6, 3.0]), "pos" => [ax, 3.1, az], "color" => sand_dk }
+  end,
+  # tiled floor medallion
+  { "type" => "plane", "size" => [6.5, 6.5], "pos" => [0, 0.012, 0], "color" => tile_blue },
+  { "type" => "plane", "size" => [3.2, 3.2], "pos" => [0, 0.018, 0], "color" => "#e8dcc0", "rot" => Math::PI / 4 },
+  # central fountain (sandstone basin, glowing water)
+  { "type" => "cylinder", "r" => 1.9, "h" => 0.55, "pos" => [0, 0.28, 0], "color" => sand_dk, "segments" => 16 },
+  { "type" => "cylinder", "r" => 1.6, "h" => 0.16, "pos" => [0, 0.6, 0], "color" => "#3a9ac0", "emissive" => "#164055", "segments" => 16 },
+  { "type" => "cylinder", "r" => 0.3, "h" => 1.2, "pos" => [0, 1.0, 0], "color" => sand, "segments" => 10 },
+  { "type" => "cylinder", "r" => 0.75, "r2" => 0.85, "h" => 0.2, "pos" => [0, 1.55, 0], "color" => sand, "segments" => 12 },
+  { "type" => "sphere", "r" => 0.22, "pos" => [0, 1.8, 0], "color" => "#7ad0e8", "emissive" => "#1a4a55", "segments" => 8 },
+  # ornamental columns (foreground occluders)
+  *arabic_cols.flat_map do |cx, cz|
+    [
+      { "type" => "cylinder", "r" => 0.32, "h" => 3.0, "pos" => [cx, 1.5, cz], "color" => "#ddd0b4", "segments" => 10 },
+      { "type" => "cylinder", "r" => 0.42, "r2" => 0.32, "h" => 0.4, "pos" => [cx, 3.1, cz], "color" => sand_dk, "segments" => 10 }
+    ]
+  end,
+  *arabic_palms.flat_map { |px, pz| palm(px, pz) },
+  # benches
+  *arabic_benches.flat_map do |bx, bz|
+    [
+      { "type" => "box", "size" => [1.6, 0.16, 0.6], "pos" => [bx, 0.42, bz], "color" => "#b08a5a" },
+      { "type" => "box", "size" => [1.6, 0.5, 0.14], "pos" => [bx, 0.7, bz - 0.25], "color" => "#9a7648" }
+    ]
+  end,
+  # hanging lanterns near the arches
+  *[[-3.4, 3.4], [3.4, -3.4]].map { |lx, lz| { "type" => "sphere", "r" => 0.22, "pos" => [lx, 2.6, lz], "color" => "#ffcf7a", "emissive" => "#b07a20", "segments" => 8 } }
 ]
 
 arabic = {
-  "spawn" => { "x" => 0.0, "z" => 3.0, "heading" => Math::PI },
-  "background" => "#4a4038",
-  "backdrop" => "/arabic.png",
-  "ground_color" => "#8f8578",
+  "spawn" => { "x" => 0.0, "z" => -5.0, "heading" => 0.0 },
+  "background" => "#1a1220",
+  "ground_color" => "#b89a6c",
   "lights" => {
-    "ambient" => { "color" => "#cfd4d8", "intensity" => 2.6 },
-    "directional" => { "color" => "#fff0dc", "intensity" => 2.8, "position" => [5, 9, 6] }
+    "ambient" => { "color" => "#b09878", "intensity" => 3.4 },
+    "directional" => { "color" => "#ffe2b0", "intensity" => 4.2, "position" => [6, 11, 4] }
   },
-  "camera" => { "position" => [0.0, 1.5, 6.0], "look_at" => [0.0, 0.9, -0.6], "fov" => 52 },
-  "walkmesh" => grid_walkmesh(width: 10, depth: 10, blocked: arabic_blocked),
+  "camera" => { "position" => [11, 12, 11], "look_at" => [0, 0.4, 0], "fov" => 46 },
+  "walkmesh" => grid_walkmesh(width: 14, depth: 14, blocked: arabic_blocked),
   "props" => arabic_props,
   "interactables" => [
-    { "id" => "fountain", "name" => "Fountain", "x" => 0.0, "z" => 0.0, "radius" => 2.2,
-      "text" => "Cool water spills tier to tier over carved sandstone. The\nbasin's script rearranges itself when you look away." },
-    { "id" => "table", "name" => "Café Table", "x" => -3.2, "z" => 3.2, "radius" => 1.5,
-      "text" => "A pink floral cloth, a half-drunk glass. Someone was here a\nmoment ago — the chair is still warm." },
-    { "id" => "arch", "name" => "Shaded Doorway", "x" => 0.0, "z" => -4.2, "radius" => 1.6,
-      "text" => "The old door stands ajar on a dark hall. Beyond it, the\nafternoon belongs to a different courtyard." }
+    { "id" => "fountain", "name" => "Fountain", "x" => 0.0, "z" => 0.0, "radius" => 2.7,
+      "text" => "Cool water spills over sandstone. The tilework spells a word\nin a script that rearranges itself when you look away." },
+    { "id" => "bench", "name" => "Shaded Bench", "x" => 5.2, "z" => -5.2, "radius" => 1.4,
+      "text" => "The stone is warm. Date palms rustle overhead, dropping\nlong blue shadows across the courtyard." },
+    { "id" => "arch", "name" => "Horseshoe Arch", "x" => 0.0, "z" => -6.4, "radius" => 1.4,
+      "text" => "Four gateways, four elsewheres. Each arch frames a\ndifferent impossible afternoon." }
   ],
   "exits" => [
-    { "id" => "to_courtyard", "to" => "courtyard", "x" => 0.0, "z" => -4.2, "radius" => 0.9,
+    { "id" => "to_courtyard", "to" => "courtyard", "x" => 0.0, "z" => -6.6, "radius" => 0.9,
       "spawn" => { "x" => 0.0, "z" => 5.0, "heading" => Math::PI } },
-    { "id" => "to_rainforest", "to" => "rainforest", "x" => 4.4, "z" => 0.8, "radius" => 0.9,
+    { "id" => "to_rainforest", "to" => "rainforest", "x" => 6.6, "z" => 0.0, "radius" => 0.9,
       "spawn" => { "x" => -6.2, "z" => 0.0, "heading" => Math::PI / 2 } },
-    { "id" => "to_foodcourt", "to" => "foodcourt", "x" => -4.5, "z" => 0.0, "radius" => 0.9,
+    { "id" => "to_foodcourt", "to" => "foodcourt", "x" => -6.6, "z" => 0.0, "radius" => 0.9,
       "spawn" => { "x" => 1.5, "z" => -7.0, "heading" => 0.0 } },
-    { "id" => "to_showerworld", "to" => "showerworld", "x" => 0.0, "z" => 4.5, "radius" => 0.9,
+    { "id" => "to_showerworld", "to" => "showerworld", "x" => 0.0, "z" => 6.6, "radius" => 0.9,
       "spawn" => { "x" => 0.0, "z" => -5.0, "heading" => 0.0 } }
   ]
 }
@@ -434,7 +447,7 @@ rainforest = {
   ],
   "exits" => [
     { "id" => "to_arabic", "to" => "arabic", "x" => -7.6, "z" => 0.0, "radius" => 0.9,
-      "spawn" => { "x" => 3.2, "z" => 0.0, "heading" => -Math::PI / 2 } },
+      "spawn" => { "x" => 5.4, "z" => 0.0, "heading" => -Math::PI / 2 } },
     { "id" => "to_megalith", "to" => "megalith", "x" => 0.0, "z" => -6.6, "radius" => 0.9,
       "spawn" => { "x" => 0.0, "z" => 5.0, "heading" => Math::PI } },
     { "id" => "to_cenote", "to" => "cenote", "x" => 5.0, "z" => 4.0, "radius" => 0.9,
@@ -682,7 +695,7 @@ foodcourt = {
   ],
   "exits" => [
     { "id" => "to_arabic", "to" => "arabic", "x" => 1.5, "z" => -8.4, "radius" => 0.9,
-      "spawn" => { "x" => -3.2, "z" => 0.0, "heading" => Math::PI / 2 } },
+      "spawn" => { "x" => -5.4, "z" => 0.0, "heading" => Math::PI / 2 } },
     { "id" => "to_kowloon", "to" => "kowloon", "x" => 1.5, "z" => 8.4, "radius" => 0.9,
       "spawn" => { "x" => 0.0, "z" => -5.0, "heading" => 0.0 } }
   ]
@@ -887,7 +900,7 @@ showerworld = {
   ],
   "exits" => [
     { "id" => "to_arabic", "to" => "arabic", "x" => 0.0, "z" => -6.6, "radius" => 0.9,
-      "spawn" => { "x" => 0.0, "z" => 2.8, "heading" => Math::PI } },
+      "spawn" => { "x" => 0.0, "z" => 5.4, "heading" => Math::PI } },
     { "id" => "to_university", "to" => "university", "x" => 0.0, "z" => 6.6, "radius" => 0.9,
       "spawn" => { "x" => 0.0, "z" => -5.6, "heading" => 0.0 } }
   ]

@@ -36,14 +36,6 @@ from `db/seeds.rb`. Adding a room = adding a seed entry; no client or server
 code changes. Client and server run the same point-in-mesh test — keep
 `game/walkmesh.js` and `Room#contains?` in agreement.
 
-**Photo-backdrop rooms**: a room may set `"backdrop" => "/foo.png"` (a file in
-`public/`) instead of relying on primitive scenery for its look. The image
-supplies all color (cover-fit to the viewport, no stretch); every prop becomes
-an invisible depth-only occluder (`colorWrite = false`), so characters are
-still correctly hidden behind foreground scenery. Line the occluder silhouettes
-up with the objects in the photo and match `camera` to the photo's viewpoint —
-calibrate by screenshot. See `arabic` (The Sandstone Courtyard) for the pattern.
-
 ## Gotchas learned the hard way
 
 - **three.js is vendored** at `vendor/javascript/three.js` (0.160.1, the last
