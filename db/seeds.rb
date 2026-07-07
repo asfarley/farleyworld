@@ -1148,3 +1148,18 @@ if Note.for_board(courtyard_room, "board").none?
   ].each { |author, body| Note.create!(room: courtyard_room, board_id: "board", author: author, body: body) }
   puts "Seeded #{Note.for_board(courtyard_room, 'board').count} starter notes on the courtyard board."
 end
+
+# Starter soapstone messages on the lounge floor (Dark Souls flavor). Only
+# seeded when the room has none, so reseeding never duplicates them. Positions
+# are on the lounge walkmesh near the spawn (x 0, z 3).
+lounge_room = Room.find_by!(slug: "lounge")
+if Soapstone.for_room(lounge_room).none?
+  [
+    [ "✦", "Praise the jukebox!",     1.6,  1.4,  0.4 ],
+    [ "➤", "Amazing chest ahead",    -1.8,  1.8,  2.1 ],
+    [ "✕", "Illusory wall ahead...",  0.0, -1.0,  0.0 ]
+  ].each do |glyph, body, x, z, heading|
+    Soapstone.create!(room: lounge_room, glyph: glyph, body: body, x: x, z: z, heading: heading, author: "???")
+  end
+  puts "Seeded #{Soapstone.for_room(lounge_room).count} starter soapstones in the lounge."
+end

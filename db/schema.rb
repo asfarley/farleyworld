@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_06_030000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_06_040000) do
   create_table "drawings", force: :cascade do |t|
     t.string "author", null: false
     t.datetime "created_at", null: false
@@ -54,7 +54,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_06_030000) do
     t.index ["slug"], name: "index_rooms_on_slug", unique: true
   end
 
+  create_table "soapstones", force: :cascade do |t|
+    t.string "author", null: false
+    t.string "body", null: false
+    t.datetime "created_at", null: false
+    t.string "glyph", null: false
+    t.float "heading", default: 0.0, null: false
+    t.integer "room_id", null: false
+    t.datetime "updated_at", null: false
+    t.float "x", null: false
+    t.float "z", null: false
+    t.index ["room_id", "created_at"], name: "index_soapstones_on_room_id_and_created_at"
+    t.index ["room_id"], name: "index_soapstones_on_room_id"
+  end
+
   add_foreign_key "drawings", "rooms"
   add_foreign_key "notes", "rooms"
   add_foreign_key "players", "rooms"
+  add_foreign_key "soapstones", "rooms"
 end

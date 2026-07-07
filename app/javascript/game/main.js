@@ -1,6 +1,7 @@
 import * as THREE from "three"
 import { buildWorld, prerenderBackground, setCanvasImage } from "game/world"
 import { Character } from "game/character"
+import { Soapstone } from "game/soapstone"
 import { Net } from "game/net"
 import { Input } from "game/input"
 import { ui } from "game/ui"
@@ -10,6 +11,7 @@ const DESIGN_ASPECT = 1.35 // landscape aspect the fixed cameras are framed for
 const WALK_SPEED = 4.0     // units / second
 const SEND_INTERVAL = 0.1  // seconds between network position updates
 const INTERACT_RANGE = 1.6
+const SOAPSTONE_RANGE = 1.4 // how close you must stand to read a ground message
 const PROMPT_VERB = { noteboard: "read", graffiti: "paint" } // SPACE hint by interactable kind
 
 export function boot() {
@@ -22,6 +24,8 @@ export function boot() {
 
   const net = new Net()
   const remotes = new Map() // player id -> { char, tx, tz, theading }
+  const soapstones = new Map() // soapstone id -> Soapstone
+  let previewStoneSeq = 0
 
   const preview = new URLSearchParams(location.search).has("preview")
   let world = null       // { room, walkmesh, envScene, actorScene, camera }
@@ -49,6 +53,7 @@ export function boot() {
 
     for (const remote of remotes.values()) remote.char.dispose()
     remotes.clear()
+    clearSoapstones()
     local = null
     background?.dispose()
 
@@ -130,6 +135,33 @@ export function boot() {
     char.setHeading(heading)
   }
 
+  function addSoapstone(data) {
+    if (!world || soapstones.has(data.id)) return
+    const stone = new Soapstone(data)
+    stone.place(world.walkmesh.heightAt(data.x, data.z) ?? 0)
+    world.actorScene.add(stone.mesh)
+    soapstones.set(data.id, stone)
+  }
+
+  function clearSoapstones() {
+    for (const stone of soapstones.values()) stone.dispose()
+    soapstones.clear()
+  }
+
+  function nearestSoapstone() {
+    if (!local) return null
+    let best = null
+    let bestDist = Infinity
+    for (const stone of soapstones.values()) {
+      const d = Math.hypot(stone.data.x - local.x, stone.data.z - local.z)
+      if (d <= SOAPSTONE_RANGE && d < bestDist) {
+        best = stone
+        bestDist = d
+      }
+    }
+    return best
+  }
+
   const handlers = {
     roster(data) {
       // Arrives on every (re)subscribe — rebuild the whole cast so a cable
@@ -139,11 +171,13 @@ export function boot() {
       spawnLocal(data.you)
       for (const p of data.players) addRemote(p)
       ui.setOnline(remotes.size + 1)
-      // Pull each graffiti wall's current mural now the subscription is live.
+      // Pull each graffiti wall's current mural and the room's soapstone
+      // messages now the subscription is live.
       if (!preview) {
         for (const item of world.room.interactables || []) {
           if (item.kind === "graffiti") net.readWall(item.id)
         }
+        net.readSoapstones()
       }
     },
     player_joined(data) {
@@ -187,6 +221,14 @@ export function boot() {
       if (world) setCanvasImage(world, data.wall, data.image)
       if (data.actor_id !== me.id) ui.notice(`${data.actor_name} tagged the wall.`)
     },
+    soapstones(data) {
+      clearSoapstones()
+      for (const stone of data.list) addSoapstone(stone)
+    },
+    soapstone_placed(data) {
+      addSoapstone(data.soapstone)
+      if (data.actor_id !== me.id) ui.notice(`${data.actor_name} left a message.`)
+    },
     async room_change(data) {
       net.leave()
       await loadRoom(data.slug)
@@ -224,17 +266,38 @@ export function boot() {
     openWallId = null
   }
 
+  ui.onPlaceSoapstone = (glyph, text) => {
+    if (!local) return
+    if (preview) {
+      // No server offline — drop it at our feet locally so ?preview shows it.
+      addSoapstone({
+        id: `local-${previewStoneSeq++}`, x: local.x, z: local.z,
+        heading: local.heading, glyph, body: text, author: me.name
+      })
+    } else {
+      net.placeSoapstone(glyph, text)
+    }
+  }
+
   const input = new Input({
     onInteract() {
-      if (ui.boardOpen || ui.graffitiOpen) return
+      if (ui.boardOpen || ui.graffitiOpen || ui.soapstoneOpen) return
       if (ui.dialogOpen) {
         ui.closeDialog()
       } else if (!exiting) {
         const item = nearestInteractable()
         if (item?.kind === "noteboard") openBoard(item)
         else if (item?.kind === "graffiti") openGraffiti(item)
-        else net.interact()
+        else {
+          const stone = nearestSoapstone()
+          if (stone) ui.dialog(`${stone.data.glyph}  MESSAGE`, `“${stone.data.body}”\n\n— left by ${stone.data.author}`)
+          else net.interact()
+        }
       }
+    },
+    onCompose() {
+      if (ui.dialogOpen || ui.boardOpen || ui.graffitiOpen || ui.soapstoneOpen || exiting || !local) return
+      ui.openSoapstone()
     }
   })
 
@@ -268,7 +331,7 @@ export function boot() {
 
   function stepLocal(dt) {
     const axis = input.axis
-    const wantsMove = (axis.x !== 0 || axis.z !== 0) && !ui.dialogOpen && !ui.boardOpen && !ui.graffitiOpen && !exiting
+    const wantsMove = (axis.x !== 0 || axis.z !== 0) && !ui.dialogOpen && !ui.boardOpen && !ui.graffitiOpen && !ui.soapstoneOpen && !exiting
 
     if (wantsMove) {
       const dir = new THREE.Vector3()
@@ -315,14 +378,19 @@ export function boot() {
       }
     }
 
-    if (ui.dialogOpen || ui.boardOpen || ui.graffitiOpen || exiting) {
+    if (ui.dialogOpen || ui.boardOpen || ui.graffitiOpen || ui.soapstoneOpen || exiting) {
       ui.prompt(null)
     } else {
       const item = nearestInteractable()
-      const other = item ? null : nearestRemote()
-      if (item) ui.prompt(`SPACE — ${PROMPT_VERB[item.kind] || "check"} ${item.name}`)
-      else if (other) ui.prompt(`SPACE — greet ${other.char.name}`)
-      else ui.prompt(null)
+      if (item) {
+        ui.prompt(`SPACE — ${PROMPT_VERB[item.kind] || "check"} ${item.name}`)
+      } else if (nearestSoapstone()) {
+        ui.prompt("SPACE — read message")
+      } else {
+        const other = nearestRemote()
+        if (other) ui.prompt(`SPACE — greet ${other.char.name}`)
+        else ui.prompt(null)
+      }
     }
   }
 
@@ -348,6 +416,7 @@ export function boot() {
       stepRemotes(dt)
       if (local) local.char.update(dt)
       for (const remote of remotes.values()) remote.char.update(dt)
+      for (const stone of soapstones.values()) stone.update(dt)
 
       renderer.clear()
       renderer.render(background.scene, background.camera)
@@ -373,6 +442,12 @@ export function boot() {
     for (const item of world.room.interactables || []) {
       if (item.kind === "graffiti") setCanvasImage(world, item.id, demoMural())
     }
+    // Stage a couple of soapstone messages near the spawn for ?preview.
+    const s = world.room.spawn
+    handlers.soapstones({ list: [
+      { id: "demo-1", x: s.x + 1.6, z: s.z - 1.2, heading: 0.4, glyph: "✦", body: "Praise the jukebox!", author: "Solaire" },
+      { id: "demo-2", x: s.x - 1.8, z: s.z - 0.4, heading: 2.1, glyph: "➤", body: "Amazing chest ahead", author: "???" }
+    ] })
     let t = 0
     setInterval(() => {
       t += 0.12

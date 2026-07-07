@@ -49,4 +49,12 @@ export class Net {
   postDrawing(id, image) {
     this.sub?.perform("post_drawing", { id, image })
   }
+
+  readSoapstones() {
+    this.sub?.perform("read_soapstones", {})
+  }
+
+  placeSoapstone(glyph, text) {
+    this.sub?.perform("place_soapstone", { glyph, text })
+  }
 }

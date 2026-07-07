@@ -49,11 +49,25 @@
     </div>
   </div>
 
+  <div id="soapstone" class="hidden">
+    <div id="soapstone-head">
+      <span id="soapstone-title">LEAVE A MESSAGE</span>
+      <button id="soapstone-close" type="button" aria-label="Close">✕</button>
+    </div>
+    <div id="soapstone-sub">Left on the ground where you stand, for others to find.</div>
+    <div id="soapstone-glyphs" role="group" aria-label="Symbol"></div>
+    <form id="soapstone-form" autocomplete="off">
+      <input id="soapstone-input" type="text" maxlength="100" placeholder="Say something cryptic…" autocomplete="off">
+      <button id="soapstone-place" type="submit">Leave</button>
+    </form>
+  </div>
+
   <div id="notices"></div>
-  <div id="controls-hint">WASD / ARROWS — walk &nbsp;&nbsp; SPACE — interact</div>
+  <div id="controls-hint">WASD / ARROWS — walk &nbsp;&nbsp; SPACE — interact &nbsp;&nbsp; M — leave message</div>
 
   <div id="touch-controls" class="hidden" aria-hidden="true">
     <div id="touch-pad"><div id="touch-nub"></div></div>
+    <button id="touch-message" type="button" aria-label="Leave message">✎</button>
     <button id="touch-action" type="button">✕</button>
   </div>
 

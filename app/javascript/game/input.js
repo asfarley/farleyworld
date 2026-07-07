@@ -8,7 +8,7 @@ const KEYMAP = {
 const PAD_DEADZONE = 0.25
 
 export class Input {
-  constructor({ onInteract }) {
+  constructor({ onInteract, onCompose }) {
     this.held = new Set()
     this.touchAxis = { x: 0, z: 0 }
 
@@ -17,6 +17,11 @@ export class Input {
       if (e.code === "Space") {
         e.preventDefault()
         if (!e.repeat) onInteract()
+        return
+      }
+      if (e.code === "KeyM") {
+        e.preventDefault()
+        if (!e.repeat) onCompose?.()
         return
       }
       const dir = KEYMAP[e.code]
@@ -33,7 +38,7 @@ export class Input {
 
     window.addEventListener("blur", () => this.held.clear())
 
-    this.#setupTouch(onInteract)
+    this.#setupTouch(onInteract, onCompose)
   }
 
   // Screen-space intent: x = right(+)/left(-), z = down(+)/up(-).
@@ -45,7 +50,7 @@ export class Input {
     return this.touchAxis
   }
 
-  #setupTouch(onInteract) {
+  #setupTouch(onInteract, onCompose) {
     const controls = document.getElementById("touch-controls")
     if (!controls) return
 
@@ -98,6 +103,11 @@ export class Input {
     document.getElementById("touch-action").addEventListener("pointerdown", e => {
       e.preventDefault()
       onInteract()
+    })
+
+    document.getElementById("touch-message")?.addEventListener("pointerdown", e => {
+      e.preventDefault()
+      onCompose?.()
     })
   }
 }

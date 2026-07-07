@@ -458,10 +458,124 @@ html, body {
   transform: scale(0.94);
 }
 
+#touch-message {
+  position: absolute;
+  right: max(30px, calc(env(safe-area-inset-right) + 8px));
+  bottom: max(126px, calc(env(safe-area-inset-bottom) + 108px));
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 2px solid var(--ui-border);
+  background: radial-gradient(circle at 50% 35%, #7a5a1acc, #2a1c08cc);
+  color: #ffcf8a;
+  font: inherit;
+  font-size: 1.4rem;
+  box-shadow: 2px 2px 0 #00000088;
+  pointer-events: auto;
+  touch-action: none;
+  cursor: pointer;
+}
+#touch-message:active {
+  filter: brightness(1.5);
+  transform: scale(0.94);
+}
+
+/* ---- Soapstone composer ---- */
+#soapstone {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(420px, 92vw);
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(#3a2a10f2, #1a1204f2);
+  border: 3px solid var(--ui-border);
+  border-radius: 8px;
+  box-shadow: 3px 3px 0 #000000aa, inset 0 0 30px #00000055;
+  pointer-events: auto;
+  z-index: 6;
+}
+
+#soapstone-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 2px solid #ffffff22;
+}
+
+#soapstone-title { color: #ffcf8a; letter-spacing: 0.1em; font-size: 0.9rem; }
+
+#soapstone-close {
+  background: none; border: none;
+  color: #ffe9a8; font: inherit; font-size: 1.1rem;
+  line-height: 1; cursor: pointer;
+}
+#soapstone-close:hover { filter: brightness(1.4); }
+
+#soapstone-sub {
+  padding: 8px 14px 0;
+  color: #b6a074; font-size: 0.78rem; line-height: 1.4;
+}
+
+#soapstone-glyphs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px 14px 4px;
+}
+
+.s-glyph {
+  width: 38px; height: 38px;
+  background: #00000055;
+  border: 2px solid var(--ui-border);
+  border-radius: 6px;
+  color: #ffcf8a;
+  font-size: 1.15rem; line-height: 1;
+  cursor: pointer;
+}
+.s-glyph:hover { filter: brightness(1.3); }
+.s-glyph.active {
+  border-color: #ffcf7a;
+  background: #ff9d3a22;
+  box-shadow: 0 0 10px #ff9d3a88;
+}
+
+#soapstone-form {
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 2px solid #ffffff22;
+}
+
+#soapstone-input {
+  flex: 1;
+  background: var(--ui-blue-b);
+  border: 2px solid var(--ui-border);
+  border-radius: 6px;
+  color: var(--ui-text);
+  font: inherit; font-size: 0.85rem;
+  padding: 6px 10px;
+  outline: none;
+}
+#soapstone-input:focus { border-color: #ffcf7a; box-shadow: 0 0 10px #ff9d3a55; }
+
+#soapstone-place {
+  background: linear-gradient(#7a5a1a, #402a08);
+  border: 2px solid var(--ui-border);
+  border-radius: 6px;
+  color: var(--ui-text);
+  font: inherit; font-size: 0.85rem;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+#soapstone-place:hover { filter: brightness(1.35); }
+
 /* keep the dialog clear of thumbs on small screens */
 @media (max-width: 700px) {
   #dialog { bottom: 120px; width: 94vw; }
   #prompt { bottom: 220px; }
   #noteboard { top: 42%; max-height: 62vh; width: 94vw; }
   #graffiti { top: 44%; width: 96vw; }
+  #soapstone { top: 40%; width: 94vw; }
 }

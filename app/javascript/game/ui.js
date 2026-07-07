@@ -1,5 +1,8 @@
 // DOM chrome: room name, online count, interaction prompt, FF-style dialog
-// box, the note board, transient notices and the room-transition fade.
+// box, the note board, the soapstone composer, transient notices and the
+// room-transition fade.
+import { SOAPSTONE_GLYPHS } from "game/soapstone"
+
 const el = id => document.getElementById(id)
 
 let dialogTimer = null
@@ -140,6 +143,40 @@ window.addEventListener("keydown", e => {
   if (e.key === "Escape" && ui.graffitiOpen) ui.closeGraffiti()
 })
 
+// ---- Soapstone composer ----
+// Pick a glowing glyph and type a short cryptic line; it's left on the ground
+// where the player stands. The glyph set mirrors Soapstone::GLYPHS server-side.
+let selectedGlyph = SOAPSTONE_GLYPHS[0]
+const sGlyphs = el("soapstone-glyphs")
+if (sGlyphs) {
+  SOAPSTONE_GLYPHS.forEach((g, i) => {
+    const b = document.createElement("button")
+    b.type = "button"
+    b.className = "s-glyph"
+    b.textContent = g
+    if (i === 0) b.classList.add("active")
+    b.addEventListener("click", () => {
+      selectedGlyph = g
+      ;[...sGlyphs.children].forEach(c => c.classList.remove("active"))
+      b.classList.add("active")
+    })
+    sGlyphs.appendChild(b)
+  })
+}
+el("soapstone-close")?.addEventListener("click", () => ui.closeSoapstone())
+el("soapstone-form")?.addEventListener("submit", e => {
+  e.preventDefault()
+  const input = el("soapstone-input")
+  const text = input.value.trim()
+  if (!text) return
+  ui.onPlaceSoapstone?.(selectedGlyph, text)
+  input.value = ""
+  ui.closeSoapstone()
+})
+window.addEventListener("keydown", e => {
+  if (e.key === "Escape" && ui.soapstoneOpen) ui.closeSoapstone()
+})
+
 // Builds a note row entirely with textContent — user text never touches innerHTML.
 function noteEl(n) {
   const node = document.createElement("div")
@@ -262,6 +299,24 @@ export const ui = {
 
   closeGraffiti() {
     el("graffiti").classList.add("hidden")
+  },
+
+  // ---- Soapstone composer ----
+  onPlaceSoapstone: null, // set by main.js; called with (glyph, text) on submit
+
+  get soapstoneOpen() {
+    const s = el("soapstone")
+    return s && !s.classList.contains("hidden")
+  },
+
+  openSoapstone() {
+    el("soapstone").classList.remove("hidden")
+    el("soapstone-input").focus()
+  },
+
+  closeSoapstone() {
+    el("soapstone").classList.add("hidden")
+    el("soapstone-input").blur()
   },
 
   notice(text) {

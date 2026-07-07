@@ -104,6 +104,32 @@ class RoomChannel < ApplicationCable::Channel
     })
   end
 
+  # Soapstone messages. read_soapstones is public room state (every message is
+  # drawn on the floor for everyone, wherever they stand); place_soapstone drops
+  # one at the writer's own feet, so it only has to sit on the walkmesh.
+  def read_soapstones(_data = {})
+    list = Soapstone.for_room(@room).recent.limit(Soapstone::KEEP).map(&:to_payload)
+    transmit({ "type" => "soapstones", "list" => list })
+  end
+
+  def place_soapstone(data)
+    me = current_player.reload
+    return unless @room.contains?(me.x, me.z)
+
+    glyph = data["glyph"].to_s
+    return unless Soapstone::GLYPHS.include?(glyph)
+    body = data["text"].to_s.strip[0, Soapstone::MAX_BODY].to_s
+    return if body.empty?
+
+    stone = Soapstone.create!(room: @room, x: me.x, z: me.z, heading: me.heading,
+                              glyph: glyph, body: body, author: me.name)
+    Soapstone.prune(@room)
+    broadcast({
+      "type" => "soapstone_placed", "soapstone" => stone.to_payload,
+      "actor_id" => me.id, "actor_name" => me.name
+    })
+  end
+
   def use_exit(data)
     me = current_player.reload
     exit_def = @room.exit_near(me.x, me.z, data["id"].to_s)
