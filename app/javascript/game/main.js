@@ -1,5 +1,5 @@
 import * as THREE from "three"
-import { buildWorld, prerenderBackground } from "game/world"
+import { buildWorld, prerenderBackground, setCanvasImage } from "game/world"
 import { Character } from "game/character"
 import { Net } from "game/net"
 import { Input } from "game/input"
@@ -10,6 +10,7 @@ const DESIGN_ASPECT = 1.35 // landscape aspect the fixed cameras are framed for
 const WALK_SPEED = 4.0     // units / second
 const SEND_INTERVAL = 0.1  // seconds between network position updates
 const INTERACT_RANGE = 1.6
+const PROMPT_VERB = { noteboard: "read", graffiti: "paint" } // SPACE hint by interactable kind
 
 export function boot() {
   const root = document.getElementById("game")
@@ -29,6 +30,8 @@ export function boot() {
   let local = null       // { char, x, z, heading, moving }
   let exiting = false
   let openBoardId = null // id of the noteboard whose panel is currently open
+  let openWallId = null  // id of the graffiti wall whose editor is currently open
+  const wallImages = new Map() // wall id -> latest PNG data URL, for editor preload
   let sendTimer = 0
   let lastSent = { x: null, z: null, heading: null, moving: false }
 
@@ -37,7 +40,10 @@ export function boot() {
     ui.prompt(null)
     ui.closeDialog()
     ui.closeBoard()
+    ui.closeGraffiti()
     openBoardId = null
+    openWallId = null
+    wallImages.clear()
 
     const room = await fetch(`/rooms/${slug}`).then(r => r.json())
 
@@ -133,6 +139,12 @@ export function boot() {
       spawnLocal(data.you)
       for (const p of data.players) addRemote(p)
       ui.setOnline(remotes.size + 1)
+      // Pull each graffiti wall's current mural now the subscription is live.
+      if (!preview) {
+        for (const item of world.room.interactables || []) {
+          if (item.kind === "graffiti") net.readWall(item.id)
+        }
+      }
     },
     player_joined(data) {
       if (data.player.id === me.id) return
@@ -165,6 +177,16 @@ export function boot() {
       if (ui.boardOpen && data.board === openBoardId) ui.prependNote(data.note)
       if (data.actor_id !== me.id) ui.notice(`${data.actor_name} pinned a note.`)
     },
+    wall_image(data) {
+      if (data.image) wallImages.set(data.wall, data.image)
+      else wallImages.delete(data.wall)
+      if (world) setCanvasImage(world, data.wall, data.image)
+    },
+    wall_drawn(data) {
+      wallImages.set(data.wall, data.image)
+      if (world) setCanvasImage(world, data.wall, data.image)
+      if (data.actor_id !== me.id) ui.notice(`${data.actor_name} tagged the wall.`)
+    },
     async room_change(data) {
       net.leave()
       await loadRoom(data.slug)
@@ -190,14 +212,27 @@ export function boot() {
     if (openBoardId) net.postNote(openBoardId, text)
   }
 
+  function openGraffiti(item) {
+    openWallId = item.id
+    ui.openGraffiti(item.name, item.text, wallImages.get(item.id))
+  }
+
+  ui.onSubmitGraffiti = image => {
+    if (!openWallId) return
+    if (preview) setCanvasImage(world, openWallId, image) // no server offline — paint locally
+    else net.postDrawing(openWallId, image)
+    openWallId = null
+  }
+
   const input = new Input({
     onInteract() {
-      if (ui.boardOpen) return
+      if (ui.boardOpen || ui.graffitiOpen) return
       if (ui.dialogOpen) {
         ui.closeDialog()
       } else if (!exiting) {
         const item = nearestInteractable()
         if (item?.kind === "noteboard") openBoard(item)
+        else if (item?.kind === "graffiti") openGraffiti(item)
         else net.interact()
       }
     }
@@ -233,7 +268,7 @@ export function boot() {
 
   function stepLocal(dt) {
     const axis = input.axis
-    const wantsMove = (axis.x !== 0 || axis.z !== 0) && !ui.dialogOpen && !ui.boardOpen && !exiting
+    const wantsMove = (axis.x !== 0 || axis.z !== 0) && !ui.dialogOpen && !ui.boardOpen && !ui.graffitiOpen && !exiting
 
     if (wantsMove) {
       const dir = new THREE.Vector3()
@@ -280,12 +315,12 @@ export function boot() {
       }
     }
 
-    if (ui.dialogOpen || ui.boardOpen || exiting) {
+    if (ui.dialogOpen || ui.boardOpen || ui.graffitiOpen || exiting) {
       ui.prompt(null)
     } else {
       const item = nearestInteractable()
       const other = item ? null : nearestRemote()
-      if (item) ui.prompt(`SPACE — ${item.kind === "noteboard" ? "read" : "check"} ${item.name}`)
+      if (item) ui.prompt(`SPACE — ${PROMPT_VERB[item.kind] || "check"} ${item.name}`)
       else if (other) ui.prompt(`SPACE — greet ${other.char.name}`)
       else ui.prompt(null)
     }
@@ -334,6 +369,10 @@ export function boot() {
     handlers.roster({ you: { id: me.id, name: me.name, ...spawn }, players: [] })
     handlers.player_joined({ player: { id: -1, name: "Tifa", x: -2, z: 1, heading: 1 } })
     handlers.player_joined({ player: { id: -2, name: "Barret", x: 3.5, z: -1, heading: -0.6 } })
+    // Stage a demo mural on any graffiti wall so ?preview shows the feature.
+    for (const item of world.room.interactables || []) {
+      if (item.kind === "graffiti") setCanvasImage(world, item.id, demoMural())
+    }
     let t = 0
     setInterval(() => {
       t += 0.12
@@ -343,6 +382,21 @@ export function boot() {
         heading: t + Math.PI / 2, moving: true
       })
     }, 120)
+  }
+
+  function demoMural() {
+    const c = document.createElement("canvas")
+    c.width = 512; c.height = 320
+    const g = c.getContext("2d")
+    g.lineCap = "round"; g.lineJoin = "round"
+    g.strokeStyle = "#f4e04d"; g.lineWidth = 16
+    g.beginPath(); g.moveTo(60, 250); g.quadraticCurveTo(150, 60, 250, 200)
+    g.quadraticCurveTo(340, 320, 440, 90); g.stroke()
+    g.strokeStyle = "#31c4d4"; g.lineWidth = 10
+    g.beginPath(); g.arc(370, 210, 60, 0, Math.PI * 2); g.stroke()
+    g.fillStyle = "#ff6fb5"
+    g.beginPath(); g.arc(150, 150, 26, 0, Math.PI * 2); g.fill()
+    return c.toDataURL("image/png")
   }
 
   loadRoom(root.dataset.roomSlug).then(() => {

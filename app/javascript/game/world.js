@@ -15,14 +15,69 @@ export function buildWorld(room) {
   addLights(actorScene, room)
 
   envScene.add(groundMesh(room))
-  for (const prop of room.props || []) envScene.add(propMesh(prop))
+
+  // Drawable "canvas" props (graffiti walls) are transparent decals that update
+  // at runtime, so they live in the actor scene — rendered live over the
+  // pre-rendered background and depth-tested against it, so foreground scenery
+  // still occludes them. Everything else is static and pre-rendered.
+  const canvases = new Map()
+  for (const prop of room.props || []) {
+    if (prop.type === "canvas") {
+      const decal = canvasDecal(prop)
+      actorScene.add(decal.mesh)
+      canvases.set(prop.id, decal)
+    } else {
+      envScene.add(propMesh(prop))
+    }
+  }
 
   const cam = room.camera
   const camera = new THREE.PerspectiveCamera(cam.fov || 40, 1, 0.1, 200)
   camera.position.set(...cam.position)
   camera.lookAt(new THREE.Vector3(...cam.look_at))
 
-  return { room, walkmesh, envScene, actorScene, camera }
+  return { room, walkmesh, envScene, actorScene, camera, canvases }
+}
+
+// A thin transparent plane stood just proud of a wall, holding a player-drawn
+// PNG. Starts hidden until an image is loaded via setCanvasImage.
+function canvasDecal(prop) {
+  const [w, h] = prop.size
+  const texture = new THREE.Texture()
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.minFilter = THREE.LinearFilter
+  texture.magFilter = THREE.LinearFilter
+  texture.generateMipmaps = false
+
+  const material = new THREE.MeshBasicMaterial({
+    map: texture,
+    transparent: true,
+    depthWrite: false,      // a decal — never occludes the characters
+    side: THREE.DoubleSide
+  })
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), material)
+  mesh.position.set(...prop.pos)
+  if (prop.rot) mesh.rotation.y = prop.rot
+  mesh.visible = false
+
+  const img = new Image()
+  img.onload = () => {
+    texture.image = img
+    texture.needsUpdate = true
+    mesh.visible = true
+  }
+  return { mesh, texture, img }
+}
+
+// Repaint a graffiti wall. `image` is a PNG data URL (or null/"" to blank it).
+export function setCanvasImage(world, id, image) {
+  const decal = world.canvases?.get(id)
+  if (!decal) return
+  if (!image) {
+    decal.mesh.visible = false
+    return
+  }
+  decal.img.src = image
 }
 
 // The FF7/RE trick: render the static room ONCE into a color+depth target.

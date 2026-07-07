@@ -775,7 +775,9 @@ kowloon = {
     { "id" => "to_huaqiangbei", "to" => "huaqiangbei", "x" => 6.6, "z" => 0.0, "radius" => 0.9,
       "spawn" => { "x" => -6.4, "z" => 0.0, "heading" => Math::PI / 2 } },
     { "id" => "to_shanty", "to" => "shanty", "x" => -6.6, "z" => 0.0, "radius" => 0.9,
-      "spawn" => { "x" => 5.0, "z" => 0.0, "heading" => -Math::PI / 2 } }
+      "spawn" => { "x" => 5.0, "z" => 0.0, "heading" => -Math::PI / 2 } },
+    { "id" => "to_alley", "to" => "alley", "x" => 0.0, "z" => 6.6, "radius" => 0.9,
+      "spawn" => { "x" => 0.0, "z" => 4.6, "heading" => Math::PI } }
   ]
 }
 
@@ -1039,6 +1041,79 @@ shanty = {
   ]
 }
 
+# ------------------------------------------------ The Alley (graffiti wall)
+
+# A dead-end concrete alley off Kowloon. The big north wall is a "canvas" prop:
+# a transparent decal plane players spray drawings onto through a pop-up editor
+# (see app/javascript/game/ui.js + world.js; drawings persist in the Drawing
+# table, keyed by the interactable id "alley_wall").
+concrete    = "#6b6660"
+concrete_dk = "#4f4b45"
+
+alley_blocked = lambda do |cx, cz|
+  (cx.between?(2.6, 4.6) && cz.between?(-4.6, -2.4)) ||   # dumpster
+    (cx.between?(-4.4, -3.0) && cz.between?(-3.8, -2.2))  # stacked crates
+end
+
+alley_props = [
+  # perimeter concrete, open to the south (the alley mouth → Kowloon)
+  *walls(10, 12, gaps: [ :s ], h: 4.0, color: concrete),
+  # horizontal form-lines on the back wall, just proud of it
+  { "type" => "box", "size" => [ 10.0, 0.08, 0.05 ], "pos" => [ 0, 1.2, -5.78 ], "color" => concrete_dk },
+  { "type" => "box", "size" => [ 10.0, 0.08, 0.05 ], "pos" => [ 0, 2.9, -5.78 ], "color" => concrete_dk },
+  # THE DRAWABLE WALL — transparent decal, painted by players, sits just in
+  # front of the north wall's face (z = -5.8) and faces the camera (+z).
+  { "type" => "canvas", "id" => "alley_wall", "size" => [ 7.2, 3.0 ], "pos" => [ 0, 2.0, -5.72 ] },
+  # dumpster
+  { "type" => "box", "size" => [ 1.8, 1.2, 2.0 ], "pos" => [ 3.6, 0.6, -3.5 ], "color" => "#2f6a3a" },
+  { "type" => "box", "size" => [ 1.9, 0.2, 2.1 ], "pos" => [ 3.6, 1.25, -3.5 ], "color" => "#264f2c" },
+  # stacked crates opposite it
+  { "type" => "box", "size" => [ 1.1, 1.0, 1.1 ], "pos" => [ -3.7, 0.5, -3.0 ], "color" => "#6a5030" },
+  { "type" => "box", "size" => [ 0.9, 0.9, 0.9 ], "pos" => [ -3.6, 1.45, -3.0 ], "color" => "#5a4228" },
+  # drainpipes running the side walls
+  { "type" => "cylinder", "r" => 0.12, "h" => 4.0, "pos" => [ -4.7, 2.0, -1.0 ], "color" => "#3a3630", "segments" => 6 },
+  { "type" => "cylinder", "r" => 0.12, "h" => 4.0, "pos" => [ 4.7, 2.0, 1.5 ], "color" => "#3a3630", "segments" => 6 },
+  # a couple of wall lamps — the light the mural is seen by
+  { "type" => "sphere", "r" => 0.18, "pos" => [ -3.0, 3.4, -5.5 ], "color" => "#ffe6a0", "emissive" => "#b0842e", "segments" => 8 },
+  { "type" => "sphere", "r" => 0.18, "pos" => [ 3.0, 3.4, -5.5 ], "color" => "#ffe6a0", "emissive" => "#b0842e", "segments" => 8 },
+  # neon sign jutting off the east wall
+  { "type" => "box", "size" => [ 0.12, 1.1, 1.8 ], "pos" => [ 4.4, 3.0, -0.5 ], "color" => "#ff2f6a", "emissive" => "#ff2f6a" },
+  # oily puddle
+  { "type" => "plane", "size" => [ 2.4, 1.6 ], "pos" => [ -0.6, 0.012, 1.5 ], "color" => "#23262a", "emissive" => "#0a1418" },
+  # trash bags heaped by the dumpster
+  { "type" => "sphere", "r" => 0.4, "pos" => [ 2.2, 0.35, -2.6 ], "color" => "#1c1c1c", "segments" => 6 },
+  { "type" => "sphere", "r" => 0.35, "pos" => [ 2.6, 0.3, -2.0 ], "color" => "#242424", "segments" => 6 },
+  # AC units high on the side walls (foreground occluders)
+  { "type" => "box", "size" => [ 0.7, 0.7, 0.6 ], "pos" => [ -4.6, 3.2, 2.5 ], "color" => "#b8b8b8" },
+  { "type" => "box", "size" => [ 0.7, 0.7, 0.6 ], "pos" => [ 4.6, 3.6, -2.5 ], "color" => "#a8a8a8" }
+]
+
+alley = {
+  "spawn" => { "x" => 0.0, "z" => 4.6, "heading" => Math::PI },
+  "background" => "#08080a",
+  "ground_color" => "#55524c",
+  "lights" => {
+    "ambient" => { "color" => "#7a7a86", "intensity" => 2.8 },
+    "directional" => { "color" => "#c8d0e0", "intensity" => 2.4, "position" => [ 3, 12, 6 ] }
+  },
+  "camera" => { "position" => [ 1.2, 6.2, 10.5 ], "look_at" => [ 0, 2.0, -5.0 ], "fov" => 46 },
+  "walkmesh" => grid_walkmesh(width: 10, depth: 12, blocked: alley_blocked),
+  "props" => alley_props,
+  "interactables" => [
+    { "id" => "alley_wall", "name" => "Concrete Wall", "x" => 0.0, "z" => -3.6, "radius" => 1.9,
+      "kind" => "graffiti",
+      "text" => "A blank stretch of alley concrete, scarred and painted over\na hundred times. There's a can of spray in your hand." },
+    { "id" => "dumpster", "name" => "Dumpster", "x" => 3.6, "z" => -3.2, "radius" => 1.5,
+      "text" => "Green, dented, humming with its own ecosystem.\nSomeone has drawn a very good cat on the lid." },
+    { "id" => "puddle", "name" => "Oily Puddle", "x" => -0.6, "z" => 1.5, "radius" => 1.4,
+      "text" => "A rainbow slick that never dries. Your reflection looks up\nat you and, after a moment, shrugs." }
+  ],
+  "exits" => [
+    { "id" => "to_kowloon", "to" => "kowloon", "x" => 0.0, "z" => 5.6, "radius" => 0.9,
+      "spawn" => { "x" => 0.0, "z" => 5.4, "heading" => Math::PI } }
+  ]
+}
+
 # ------------------------------------------------------------------- persist
 
 [
@@ -1054,7 +1129,8 @@ shanty = {
   { slug: "huaqiangbei", name: "Huaqiangbei Market", data: huaqiangbei },
   { slug: "showerworld", name: "ShowerWorld", data: showerworld },
   { slug: "university", name: "UniversityWorld", data: university },
-  { slug: "shanty", name: "The Shanty", data: shanty }
+  { slug: "shanty", name: "The Shanty", data: shanty },
+  { slug: "alley", name: "The Alley", data: alley }
 ].each do |attrs|
   room = Room.find_or_initialize_by(slug: attrs[:slug])
   room.update!(name: attrs[:name], data: attrs[:data])

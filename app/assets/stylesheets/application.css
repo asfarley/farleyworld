@@ -245,6 +245,122 @@ html, body {
 }
 #noteboard-post:hover { filter: brightness(1.35); }
 
+/* ---------- Graffiti wall editor ---------- */
+
+#graffiti {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(560px, 94vw);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(#2a2a68f2, #0a0a24f2);
+  border: 3px solid var(--ui-border);
+  border-radius: 8px;
+  box-shadow: 3px 3px 0 #000000aa, inset 0 0 30px #00000055;
+  pointer-events: auto;
+  z-index: 20; /* above the touch pad so strokes aren't stolen on phones */
+}
+
+#graffiti-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 2px solid #ffffff22;
+}
+#graffiti-title { color: #a8d8ff; letter-spacing: 0.1em; font-size: 0.9rem; }
+#graffiti-close {
+  background: none; border: none;
+  color: #ffe9a8; font: inherit; font-size: 1.1rem;
+  line-height: 1; cursor: pointer;
+}
+#graffiti-close:hover { filter: brightness(1.4); }
+
+#graffiti-sub {
+  padding: 8px 14px 0;
+  color: #9a92c8; font-size: 0.78rem; line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+#graffiti-stage { padding: 10px 14px; }
+
+/* The concrete under-render — CSS only, never part of the exported PNG, so the
+   drawing stays transparent where the artist didn't paint. */
+#graffiti-canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 512 / 320;
+  border: 2px solid var(--ui-border);
+  border-radius: 4px;
+  cursor: crosshair;
+  touch-action: none; /* draw instead of scroll/zoom */
+  background:
+    repeating-linear-gradient(90deg, #00000010 0 2px, transparent 2px 40px),
+    repeating-linear-gradient(0deg, #00000010 0 2px, transparent 2px 40px),
+    linear-gradient(#7d7a74, #66635d);
+  box-shadow: inset 0 0 24px #00000055;
+}
+
+#graffiti-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 14px 10px;
+}
+#graffiti-colors, #graffiti-sizes { display: flex; gap: 5px; }
+
+.g-swatch {
+  width: 22px; height: 22px;
+  border: 2px solid #ffffff33;
+  border-radius: 4px;
+  padding: 0; cursor: pointer;
+}
+.g-swatch.active { border-color: #fff; box-shadow: 0 0 8px #ffffffaa; }
+.g-eraser {
+  background: #1a1a2e;
+  color: #cfc8f0; font: inherit; font-size: 0.85rem; line-height: 1;
+}
+
+.g-size {
+  min-width: 26px; height: 22px;
+  background: var(--ui-blue-b);
+  border: 2px solid #ffffff33;
+  border-radius: 4px;
+  color: var(--ui-text); font: inherit; font-size: 0.7rem;
+  cursor: pointer;
+}
+.g-size.active { border-color: #fff; box-shadow: 0 0 8px #7a5cff88; }
+
+#graffiti-clear {
+  margin-left: auto;
+  background: linear-gradient(#5a2a3a, #2a1420);
+  border: 2px solid var(--ui-border);
+  border-radius: 6px;
+  color: var(--ui-text); font: inherit; font-size: 0.78rem;
+  padding: 5px 12px; cursor: pointer;
+}
+#graffiti-clear:hover { filter: brightness(1.3); }
+
+#graffiti-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 10px 14px;
+  border-top: 2px solid #ffffff22;
+}
+#graffiti-cancel, #graffiti-submit {
+  border: 2px solid var(--ui-border);
+  border-radius: 6px;
+  color: var(--ui-text); font: inherit; font-size: 0.85rem;
+  padding: 6px 16px; cursor: pointer;
+}
+#graffiti-cancel { background: var(--ui-blue-b); }
+#graffiti-submit { background: linear-gradient(#3a3a7a, #191940); }
+#graffiti-cancel:hover, #graffiti-submit:hover { filter: brightness(1.35); }
+
 #notices {
   position: absolute;
   left: 14px; bottom: 60px;
@@ -347,4 +463,5 @@ html, body {
   #dialog { bottom: 120px; width: 94vw; }
   #prompt { bottom: 220px; }
   #noteboard { top: 42%; max-height: 62vh; width: 94vw; }
+  #graffiti { top: 44%; width: 96vw; }
 }

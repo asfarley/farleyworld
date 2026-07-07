@@ -77,6 +77,33 @@ class RoomChannel < ApplicationCable::Channel
     })
   end
 
+  # Graffiti walls. read_wall is public room state (the mural is drawn for
+  # everyone in the room, wherever they stand); post_drawing validates
+  # proximity like post_note, then broadcasts so every wall repaints live.
+  def read_wall(data)
+    wall = @room.interactables.find { |i| i["id"] == data["id"].to_s && i["kind"] == "graffiti" }
+    return unless wall
+
+    drawing = Drawing.for_wall(@room, wall["id"]).recent.first
+    transmit({ "type" => "wall_image", "wall" => wall["id"], "image" => drawing&.image })
+  end
+
+  def post_drawing(data)
+    me = current_player.reload
+    wall = wall_near(me, data["id"].to_s)
+    return unless wall
+
+    image = data["image"].to_s
+    return unless Drawing.valid_image?(image)
+
+    drawing = Drawing.create!(room: @room, wall_id: wall["id"], author: me.name, image: image)
+    Drawing.prune(@room, wall["id"])
+    broadcast({
+      "type" => "wall_drawn", "wall" => wall["id"], "image" => drawing.image,
+      "actor_id" => me.id, "actor_name" => me.name
+    })
+  end
+
   def use_exit(data)
     me = current_player.reload
     exit_def = @room.exit_near(me.x, me.z, data["id"].to_s)
@@ -110,6 +137,17 @@ class RoomChannel < ApplicationCable::Channel
     return unless Math.hypot(board["x"] - me.x, board["z"] - me.z) <= board.fetch("radius", 1.5) + INTERACT_RANGE
 
     board
+  end
+
+  # The graffiti interactable with the given id, if the player is close enough
+  # to spray it. Same generous slack as board_near — movement is locked while
+  # the editor is open, so the player is already within radius.
+  def wall_near(me, id)
+    wall = @room.interactables.find { |i| i["id"] == id && i["kind"] == "graffiti" }
+    return unless wall
+    return unless Math.hypot(wall["x"] - me.x, wall["z"] - me.z) <= wall.fetch("radius", 1.5) + INTERACT_RANGE
+
+    wall
   end
 
   def nearby_player(me)

@@ -41,4 +41,12 @@ export class Net {
   postNote(id, text) {
     this.sub?.perform("post_note", { id, text })
   }
+
+  readWall(id) {
+    this.sub?.perform("read_wall", { id })
+  }
+
+  postDrawing(id, image) {
+    this.sub?.perform("post_drawing", { id, image })
+  }
 }

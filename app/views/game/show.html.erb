@@ -29,6 +29,26 @@
     </form>
   </div>
 
+  <div id="graffiti" class="hidden">
+    <div id="graffiti-head">
+      <span id="graffiti-title">WALL</span>
+      <button id="graffiti-close" type="button" aria-label="Close">✕</button>
+    </div>
+    <div id="graffiti-sub"></div>
+    <div id="graffiti-stage">
+      <canvas id="graffiti-canvas" width="512" height="320" aria-label="Drawing area"></canvas>
+    </div>
+    <div id="graffiti-tools">
+      <div id="graffiti-colors" role="group" aria-label="Colors"></div>
+      <div id="graffiti-sizes" role="group" aria-label="Brush size"></div>
+      <button id="graffiti-clear" type="button">Clear</button>
+    </div>
+    <div id="graffiti-actions">
+      <button id="graffiti-cancel" type="button">Cancel</button>
+      <button id="graffiti-submit" type="button">Spray it</button>
+    </div>
+  </div>
+
   <div id="notices"></div>
   <div id="controls-hint">WASD / ARROWS — walk &nbsp;&nbsp; SPACE — interact</div>
 
